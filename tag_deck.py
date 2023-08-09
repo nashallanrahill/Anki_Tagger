@@ -4,8 +4,8 @@ import zipfile
 import pandas as pd
 from anki.collection import Collection
 
-HIGH_RELEVANCE_CUTOFF = 70
-MEDIUM_RELEVANCE_CUTOFF = 40
+HIGH_RELEVANCE_CUTOFF = 90
+MEDIUM_RELEVANCE_CUTOFF = 70
 REMOVE_RELEVANCE_CUTOFF = 10
 
 def main(card_path, anki_apkg):

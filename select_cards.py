@@ -6,6 +6,11 @@ import tiktoken
 from openai.embeddings_utils import get_embedding, cosine_similarity
 from openai.error import RateLimitError, APIError, ServiceUnavailableError
 import time, requests
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 MAX_POOR_MATCH_RUN = 10
 MAX_TOKENS_PER_OBJ = 5000
@@ -22,9 +27,13 @@ def handle_api_error(func):
         while True:
             try:
                 return func(*args, **kwargs)
-            except (RateLimitError, APIError, ServiceUnavailableError):
-                print(f'API Error. Waiting {t}s before retrying.')
-                time.sleep(t)  # wait for 10 seconds before retrying
+            except (RateLimitError):
+                print(f'RateLimitError. Waiting {t}s before retrying.')
+                time.sleep(t)  # wait for t seconds before retrying
+                t+=5
+            except (APIError, ServiceUnavailableError):
+                print(f'API Error (APIError or ServiceUnavailableError). Waiting {t}s before retrying.')
+                time.sleep(t)  # wait for t seconds before retrying
                 t+=5
     return wrapper
 
@@ -69,7 +78,8 @@ def tokens_in_prompt(formatted_prompt):
         formatted_prompt_str += message["content"] + " "
     return count_tokens(formatted_prompt_str)
 
-@handle_api_error
+# @handle_api_error
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def rate_card_for_obj(prompt, temperature=1):
 
     # Calculate the remaining tokens for the response
